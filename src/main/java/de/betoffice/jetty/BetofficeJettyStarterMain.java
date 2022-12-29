@@ -1,6 +1,7 @@
 package de.betoffice.jetty;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -8,6 +9,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.springframework.web.context.ContextLoaderListener;
@@ -41,12 +43,16 @@ public class BetofficeJettyStarterMain {
         server.join();
     }
 
-    private static ServletContextHandler getServletContextHandler() throws IOException {
-        ServletContextHandler contextHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
-        contextHandler.setErrorHandler(null);
+    private static HandlerCollection getServletContextHandler() throws IOException {
+        HandlerCollection handlerCollection = new HandlerCollection();
+        
+        ServletContextHandler pingContextHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        pingContextHandler.setErrorHandler(null);
+        pingContextHandler.setContextPath("/ping");
+        pingContextHandler.addServlet(new ServletHolder(new HelloServlet()), "/*");
 
-        contextHandler.setContextPath("/ping");
-        contextHandler.addServlet(new ServletHolder(new HelloServlet()), "/*");
+        handlerCollection.addHandler(pingContextHandler);
+        
         //contextHandler.setResourceBase(new ClassPathResource(WEBAPP_DIRECTORY).getURI().toString());
         //contextHandler.setContextPath(CONTEXT_PATH);
 
@@ -63,14 +69,28 @@ public class BetofficeJettyStarterMain {
         contextHandler.getInitParams().put("contextConfigLocation", "classpath:/betoffice.xml");
         contextHandler.addEventListener(new ContextLoaderListener(webAppContext));
         */
+        WebApplicationContext webAppContext = getWebApplicationContext();
+        DispatcherServlet dispatcherServlet = new DispatcherServlet(webAppContext);
+        ServletHolder springServletHolder = new ServletHolder("bo", dispatcherServlet);
+        
+        ServletContextHandler betofficeContextHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        betofficeContextHandler.setErrorHandler(null);
+        betofficeContextHandler.setContextPath("/betoffice");
+        betofficeContextHandler.addEventListener(new ContextLoaderListener());
+        betofficeContextHandler.setInitParameter("contextClass", AnnotationConfigWebApplicationContext.class.getName());
+        betofficeContextHandler.addServlet(springServletHolder, "/*");
+        
+        handlerCollection.addHandler(betofficeContextHandler);
 
-        return contextHandler;
+        return handlerCollection;
     }
 
     private static WebApplicationContext getWebApplicationContext() {
         AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
         context.scan(CONFIG_LOCATION_PACKAGE);
         context.setConfigLocation("classpath:/betoffice.xml");
+        context.refresh();
+        context.start();
         return context;
     }
 
@@ -95,10 +115,12 @@ public class BetofficeJettyStarterMain {
         private static final long serialVersionUID = -6154475799000019575L;
         private static final String greeting = "Hello World";
 
-        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                throws ServletException, IOException {
             response.setContentType("text/html");
             response.setStatus(HttpServletResponse.SC_OK);
             response.getWriter().println(greeting);
+            response.getWriter().println(LocalDateTime.now());
         }
     }
 
