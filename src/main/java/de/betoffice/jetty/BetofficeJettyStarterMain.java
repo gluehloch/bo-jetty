@@ -22,7 +22,7 @@ public class BetofficeJettyStarterMain {
     private static final int PORT = 9290;
 
     private static final String CONTEXT_PATH = "/bo";
-    private static final String CONFIG_LOCATION_PACKAGE = "de.betoffice";
+    private static final String CONFIG_LOCATION_PACKAGE = "de.betoffice.web";
     private static final String MAPPING_URL = "/";
     private static final String WEBAPP_DIRECTORY = "WEB-INF"; // "webapp";
 
@@ -76,8 +76,8 @@ public class BetofficeJettyStarterMain {
         ServletContextHandler betofficeContextHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
         betofficeContextHandler.setErrorHandler(null);
         betofficeContextHandler.setContextPath("/betoffice");
-        betofficeContextHandler.addEventListener(new ContextLoaderListener());
-        betofficeContextHandler.setInitParameter("contextClass", AnnotationConfigWebApplicationContext.class.getName());
+        betofficeContextHandler.addEventListener(new ContextLoaderListener(webAppContext));
+        // betofficeContextHandler.setInitParameter("contextClass", AnnotationConfigWebApplicationContext.class.getName());
         betofficeContextHandler.addServlet(springServletHolder, "/*");
         
         handlerCollection.addHandler(betofficeContextHandler);
@@ -88,7 +88,7 @@ public class BetofficeJettyStarterMain {
     private static WebApplicationContext getWebApplicationContext() {
         AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
         context.scan(CONFIG_LOCATION_PACKAGE);
-        context.setConfigLocation("classpath:/betoffice.xml");
+        context.setConfigLocations("./src/main/webapp/WEB-INF/bo-servlet.xml", "./src/main/webapp/WEB-INF/web.xml", "classpath:/betoffice.xml");
         context.refresh();
         context.start();
         return context;
